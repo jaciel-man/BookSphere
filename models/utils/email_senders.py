@@ -27,6 +27,11 @@ def send_email_async(recipient, subject, body):
     thread.daemon = True  # se cierra cuando la app principal termina
     thread.start()
 
+def send_verification_email(recipient, code):
+    subject = "Verificación de registro - Biblioteca Digital"
+    body = f"Hola,\n\nPara completar tu registro, ingresa el siguiente código de verificación:\n\n{code}\n\nEste código expira en 10 minutos.\n\nSaludos."
+    send_email_async(recipient, subject, body)
+
 def send_welcome_email(user_email, user_name):
     subject = "Bienvenido a Biblioteca Digital"
     body = f"Hola {user_name},\n\nGracias por registrarte en nuestra biblioteca digital. ¡Disfruta de nuestros servicios!\n\nSaludos."

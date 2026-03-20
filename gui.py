@@ -5,6 +5,7 @@ from constants import COLORES, LOGO_PATH
 from models.usuario import UsuarioRepository
 from models.libro import LibroRepository, CategoriaRepository
 from models.compra import CompraRepository
+from models.verificacion import VerificacionRepository
 from datetime import datetime
 
 # ------------------------------------------------------------
@@ -86,6 +87,83 @@ class AdminUsersView(ctk.CTkToplevel):
 
         ctk.CTkButton(frame, text="Cerrar", command=self.destroy,
                       fg_color=COLORES["tangerine"], text_color=COLORES["jet_black"]).pack(pady=10)
+
+
+# ------------------------------------------------------------
+# Ventana de verificación por correo
+# ------------------------------------------------------------
+class VentanaVerificacion(ctk.CTkToplevel):
+    def __init__(self, padre, email, usuario_repo, verificacion_repo, datos_registro, callback_confirmacion):
+        super().__init__(padre)
+        self.title("Verificación de correo")
+        self.geometry("400x350")
+        self.transient(padre)
+        self.grab_set()
+
+        self.email = email
+        self.usuario_repo = usuario_repo
+        self.verificacion_repo = verificacion_repo
+        self.datos_registro = datos_registro
+        self.callback_confirmacion = callback_confirmacion
+
+        self.colores = COLORES
+
+        frame = ctk.CTkFrame(self, fg_color=self.colores["soft_peach"])
+        frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        ctk.CTkLabel(frame, text="Verificación de correo", font=("Segoe UI", 14, "bold"),
+                     text_color=self.colores["jet_black"]).pack(pady=10)
+
+        ctk.CTkLabel(frame, text=f"Se ha enviado un código de 6 dígitos a:\n{email}",
+                     text_color=self.colores["jet_black"]).pack(pady=5)
+
+        ctk.CTkLabel(frame, text="Código:", text_color=self.colores["jet_black"]).pack(pady=5)
+        self.entry_codigo = ctk.CTkEntry(frame)
+        self.entry_codigo.pack(pady=5)
+
+        self.lbl_mensaje = ctk.CTkLabel(frame, text="", text_color=self.colores["tangerine"])
+        self.lbl_mensaje.pack(pady=5)
+
+        btn_verificar = ctk.CTkButton(frame, text="Verificar", fg_color=self.colores["tangerine"],
+                                      text_color=self.colores["jet_black"], command=self.verificar)
+        btn_verificar.pack(pady=10)
+
+        btn_reenviar = ctk.CTkButton(frame, text="Reenviar código", fg_color=self.colores["dry_sage"],
+                                     text_color=self.colores["jet_black"], command=self.reenviar_codigo)
+        btn_reenviar.pack(pady=5)
+
+        # Si se cierra la ventana sin verificar, eliminamos el usuario pendiente
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def verificar(self):
+        codigo = self.entry_codigo.get().strip()
+        if not codigo:
+            self.lbl_mensaje.configure(text="Ingrese el código")
+            return
+        if self.verificacion_repo.verificar_codigo(self.email, codigo):
+            # Confirmar usuario en la base de datos
+            self.usuario_repo.confirmar_usuario(self.email)
+            CTkMessagebox(self, title="Éxito", message="Usuario verificado y registrado correctamente.", icon="info")
+            self.callback_confirmacion()  # Cierra la ventana de registro y actualiza la interfaz
+            self.destroy()
+        else:
+            self.lbl_mensaje.configure(text="Código incorrecto o expirado")
+
+    def reenviar_codigo(self):
+        # Limpiar códigos expirados
+        self.verificacion_repo.limpiar_codigos_expirados()
+        nuevo_codigo = self.verificacion_repo.crear_codigo(self.email)
+        if nuevo_codigo:
+            from utils.email_sender import send_verification_email
+            send_verification_email(self.email, nuevo_codigo)
+            CTkMessagebox(self, title="Reenviado", message="Se ha enviado un nuevo código a tu correo.", icon="info")
+        else:
+            CTkMessagebox(self, title="Error", message="No se pudo generar un código. Intente más tarde.", icon="cancel")
+
+    def on_close(self):
+        # Eliminar usuario pendiente si no se completó la verificación
+        self.usuario_repo.eliminar_usuario_pendiente(self.email)
+        self.destroy()
 
 
 # ------------------------------------------------------------
@@ -445,7 +523,7 @@ class VentanaLogin(ctk.CTkToplevel):
             self.callback_exito(usuario)
             self.destroy()
         else:
-            self.lbl_mensaje_login.configure(text="Email o contraseña incorrectos")
+            self.lbl_mensaje_login.configure(text="Email o contraseña incorrectos (o no verificado)")
 
     def procesar_registro(self):
         datos = {k: v.get() for k, v in self.reg_entries.items()}
@@ -455,24 +533,52 @@ class VentanaLogin(ctk.CTkToplevel):
         if datos["Contraseña:"] != datos["Confirmar contraseña:"]:
             self.lbl_mensaje_reg.configure(text="Las contraseñas no coinciden")
             return
+
+        email = datos["Email:"]
+        # Verificar si el email ya está registrado (incluso pendiente)
+        if self.usuario_repo.usuario_existe(email):
+            self.lbl_mensaje_reg.configure(text="El email ya está registrado")
+            return
+
         rol = "admin" if self.is_admin.get() else "usuario"
-        exito = self.usuario_repo.registrar(
+        # Insertar usuario como pendiente
+        exito = self.usuario_repo.registrar_pendiente(
             datos["Nombre completo:"],
-            datos["Email:"],
+            email,
             datos["Teléfono:"],
             datos["Fecha nacimiento (YYYYMMDD):"],
             datos["Contraseña:"],
             rol
         )
         if exito:
-            CTkMessagebox(self, title="Registro", message="Usuario registrado con éxito. Ya puede iniciar sesión.", icon="info")
-            # Enviar correo de bienvenida en un hilo separado
-            from utils.email_sender import send_welcome_email
-            send_welcome_email(datos["Email:"], datos["Nombre completo:"])
-            self.tabview.set("Iniciar sesión")
-            self.limpiar_registro()
+            # Generar código de verificación
+            self.verificacion_repo = VerificacionRepository()
+            codigo = self.verificacion_repo.crear_codigo(email)
+            if codigo:
+                # Enviar email con código (hilo)
+                from utils.email_sender import send_verification_email
+                send_verification_email(email, codigo)
+
+                # Mostrar ventana de verificación
+                self.verification_window = VentanaVerificacion(
+                    self, email, self.usuario_repo, self.verificacion_repo,
+                    datos, self.registro_completado
+                )
+                # Limpiar campos de registro (opcional)
+                self.limpiar_registro()
+            else:
+                # Si falla la generación, eliminar usuario pendiente
+                self.usuario_repo.eliminar_usuario_pendiente(email)
+                CTkMessagebox(self, title="Error", message="Error al generar código. Intente más tarde.", icon="cancel")
         else:
-            self.lbl_mensaje_reg.configure(text="El email ya está registrado")
+            self.lbl_mensaje_reg.configure(text="Error al registrar (email ya existe)")
+
+    def registro_completado(self):
+        """Callback que se llama cuando la verificación es exitosa."""
+        # Cerrar la ventana de login/registro
+        self.destroy()
+        # Notificar al usuario
+        CTkMessagebox(self.master, title="Registro exitoso", message="Usuario verificado y registrado correctamente. Ahora puede iniciar sesión.", icon="info")
 
     def limpiar_registro(self):
         for entry in self.reg_entries.values():
