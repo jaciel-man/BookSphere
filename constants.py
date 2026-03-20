@@ -9,3 +9,10 @@ COLORES = {
 
 # Ruta del logo (cambiar según la ubicación real)
 LOGO_PATH = "logo.png"  # Coloca aquí la ruta a tu imagen
+
+DB_CONFIG = {
+    "host": "localhost",
+    "user": "root",          # tu usuario MySQL
+    "password": "mysql",
+    "database": "booksphere"
+}
