@@ -1,4 +1,4 @@
-
+# Colores y constantes
 COLORES = {
     "jet_black": "#202C39",
     "dark_gray": "#283845",
@@ -6,3 +6,6 @@ COLORES = {
     "soft_peach": "#F2D492",
     "tangerine": "#F29559"
 }
+
+# Ruta del logo (cambiar según la ubicación real)
+LOGO_PATH = "logo.png"  # Coloca aquí la ruta a tu imagen
