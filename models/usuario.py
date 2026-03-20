@@ -52,3 +52,19 @@ class UsuarioRepository:
         row = cursor.fetchone()
         cursor.close()
         return row[0] if row else None
+
+    def obtener_todos_usuarios(self):
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id_usuario, nombre, email, telefono, rol FROM Usuario")
+        rows = cursor.fetchall()
+        cursor.close()
+        return rows
+
+    def obtener_cantidad_usuarios(self):
+        conn = DatabaseConnection.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM Usuario")
+        count = cursor.fetchone()[0]
+        cursor.close()
+        return count

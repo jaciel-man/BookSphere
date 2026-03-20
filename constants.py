@@ -16,3 +16,12 @@ DB_CONFIG = {
     "password": "mysql",
     "database": "booksphere"
 }
+
+# Configuración del correo (ajusta según tu servidor SMTP)
+EMAIL_CONFIG = {
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "sender_email": "booksphere134@gmail.com",   # cambia por tu email
+    "sender_password": "znvp bqwj wzkx ecdb",  # usa contraseña de aplicación
+    "use_tls": True
+}

@@ -44,11 +44,55 @@ class HistorialView(ctk.CTkToplevel):
                       fg_color=COLORES["tangerine"],
                       text_color=COLORES["jet_black"]).pack(pady=10)
 
+
 # ------------------------------------------------------------
-# Panel de administración
+# Ventana de lista de usuarios (admin)
+# ------------------------------------------------------------
+class AdminUsersView(ctk.CTkToplevel):
+    def __init__(self, padre, usuario_repo):
+        super().__init__(padre)
+        self.title("Usuarios Registrados")
+        self.geometry("600x400")
+        self.transient(padre)
+        self.grab_set()
+
+        self.usuario_repo = usuario_repo
+
+        frame = ctk.CTkFrame(self, fg_color=COLORES["soft_peach"])
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        ctk.CTkLabel(frame, text="Lista de Usuarios", font=("Segoe UI", 14, "bold"),
+                     text_color=COLORES["jet_black"]).pack(pady=5)
+
+        # Contador total
+        count = self.usuario_repo.obtener_cantidad_usuarios()
+        ctk.CTkLabel(frame, text=f"Total: {count} usuarios", text_color=COLORES["jet_black"]).pack(pady=5)
+
+        # Tabla scrollable
+        scroll = ctk.CTkScrollableFrame(frame, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, pady=5)
+
+        headers = ["ID", "Nombre", "Email", "Teléfono", "Rol"]
+        for col, text in enumerate(headers):
+            lbl = ctk.CTkLabel(scroll, text=text, font=("Segoe UI", 12, "bold"),
+                               text_color=COLORES["jet_black"])
+            lbl.grid(row=0, column=col, padx=5, pady=5, sticky="w")
+
+        users = self.usuario_repo.obtener_todos_usuarios()
+        for row_idx, user in enumerate(users):
+            for col_idx, value in enumerate(user):
+                lbl = ctk.CTkLabel(scroll, text=str(value), text_color=COLORES["jet_black"])
+                lbl.grid(row=row_idx+1, column=col_idx, padx=5, pady=2, sticky="w")
+
+        ctk.CTkButton(frame, text="Cerrar", command=self.destroy,
+                      fg_color=COLORES["tangerine"], text_color=COLORES["jet_black"]).pack(pady=10)
+
+
+# ------------------------------------------------------------
+# Panel de administración (libros, categorías, usuarios)
 # ------------------------------------------------------------
 class AdminPanel(ctk.CTkToplevel):
-    def __init__(self, padre, libro_repo, categoria_repo, callback_actualizar):
+    def __init__(self, padre, libro_repo, categoria_repo, usuario_repo, callback_actualizar):
         super().__init__(padre)
         self.title("Panel de administración")
         self.geometry("800x600")
@@ -57,6 +101,7 @@ class AdminPanel(ctk.CTkToplevel):
 
         self.libro_repo = libro_repo
         self.categoria_repo = categoria_repo
+        self.usuario_repo = usuario_repo
         self.callback_actualizar = callback_actualizar
 
         self.tabview = ctk.CTkTabview(self, fg_color=COLORES["soft_peach"])
@@ -64,9 +109,11 @@ class AdminPanel(ctk.CTkToplevel):
 
         self.tab_libros = self.tabview.add("Libros")
         self.tab_categorias = self.tabview.add("Categorías")
+        self.tab_usuarios = self.tabview.add("Usuarios")
 
         self.crear_tab_libros()
         self.crear_tab_categorias()
+        self.crear_tab_usuarios()
 
     def crear_tab_libros(self):
         # Formulario para agregar/editar libro
@@ -292,6 +339,20 @@ class AdminPanel(ctk.CTkToplevel):
         self.combo_categoria.configure(values=self.categoria_repo.obtener_nombres())
         self.callback_actualizar()
 
+    def crear_tab_usuarios(self):
+        frame = self.tab_usuarios
+        ctk.CTkLabel(frame, text="Gestión de Usuarios", font=("Segoe UI", 14, "bold"),
+                     text_color=COLORES["jet_black"]).pack(pady=10)
+
+        btn_ver = ctk.CTkButton(frame, text="Ver todos los usuarios",
+                                fg_color=COLORES["tangerine"], text_color=COLORES["jet_black"],
+                                command=self.ver_usuarios)
+        btn_ver.pack(pady=10)
+
+    def ver_usuarios(self):
+        AdminUsersView(self, self.usuario_repo)
+
+
 # ------------------------------------------------------------
 # Ventana de login/registro
 # ------------------------------------------------------------
@@ -405,6 +466,9 @@ class VentanaLogin(ctk.CTkToplevel):
         )
         if exito:
             CTkMessagebox(self, title="Registro", message="Usuario registrado con éxito. Ya puede iniciar sesión.", icon="info")
+            # Enviar correo de bienvenida en un hilo separado
+            from utils.email_sender import send_welcome_email
+            send_welcome_email(datos["Email:"], datos["Nombre completo:"])
             self.tabview.set("Iniciar sesión")
             self.limpiar_registro()
         else:
@@ -415,6 +479,7 @@ class VentanaLogin(ctk.CTkToplevel):
             entry.delete(0, "end")
         self.lbl_mensaje_reg.configure(text="")
         self.is_admin.set(False)
+
 
 # ------------------------------------------------------------
 # Panel de categorías
@@ -457,6 +522,7 @@ class PanelCategorias(ctk.CTkFrame):
     def actualizar_categorias(self, nuevas_categorias):
         self.categorias = nuevas_categorias
         self.crear_botones()
+
 
 # ------------------------------------------------------------
 # Panel de libros
@@ -522,10 +588,8 @@ class PanelLibros(ctk.CTkFrame):
         if libro.stock <= 0:
             CTkMessagebox(self, title="Error", message="El libro no está disponible", icon="cancel")
             return
-        # Registrar préstamo en la base de datos
         exito = self.compra_repo.registrar_prestamo(usuario.id, libro.id)
         if exito:
-            # Actualizar estado del libro (se reduce stock)
             libro.stock -= 1
             libro.status = "Disponible" if libro.stock > 0 else "Prestado"
             self.actualizar_tabla()
@@ -536,6 +600,7 @@ class PanelLibros(ctk.CTkFrame):
     def filtrar(self, texto, categoria):
         self.libros_filtrados = self.libro_repo.filter(texto, categoria)
         self.actualizar_tabla()
+
 
 # ------------------------------------------------------------
 # Ventana principal
@@ -671,7 +736,7 @@ class BibliotecaGUI(ctk.CTk):
                 btn_admin = ctk.CTkButton(frame, text="Administrar",
                                           fg_color=self.colores["tangerine"],
                                           text_color=self.colores["jet_black"],
-                                          command=lambda: AdminPanel(ventana, self.libro_repo, self.categoria_repo, self.actualizar_despues_admin))
+                                          command=lambda: AdminPanel(ventana, self.libro_repo, self.categoria_repo, self.usuario_repo, self.actualizar_despues_admin))
                 btn_admin.pack(pady=5, fill="x")
         else:
             ctk.CTkLabel(frame, text="No has iniciado sesión", text_color=self.colores["jet_black"]).pack(pady=10)
