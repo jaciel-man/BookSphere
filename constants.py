@@ -8,7 +8,7 @@ COLORES = {
 }
 
 # Ruta del logo (cambiar según la ubicación real)
-LOGO_PATH = "logo.png"  # Coloca aquí la ruta a tu imagen
+LOGO_PATH = r"C:/Users/uliss/OneDrive - Instituto Tecnológico de Tuxtla Gutiérrez/5to semestre/proyecto_biblioteca_/BookSphere/logo.png"  # Coloca aquí la ruta a tu imagen
 
 DB_CONFIG = {
     "host": "localhost",
@@ -21,7 +21,7 @@ DB_CONFIG = {
 EMAIL_CONFIG = {
     "smtp_server": "smtp.gmail.com",
     "smtp_port": 587,
-    "sender_email": "booksphere134@gmail.com",   
+    "sender_email": "booksphere134@gmail.com",   #booksphere134@gmail.com
     "sender_password": "znvp bqwj wzkx ecdb",  
     "use_tls": True
 }
