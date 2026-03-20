@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
 from constants import COLORES
+from auth import Autenticador
 
 class VentanaLogin(ctk.CTkToplevel):
     def __init__(self, padre, autenticador, callback_exito):
@@ -14,12 +15,8 @@ class VentanaLogin(ctk.CTkToplevel):
         self.grab_set()
         self.modo = "login"
 
-        # Colores personalizados (usando la paleta original)
-        self.colores = {
-            "fondo": COLORES["soft_peach"],
-            "texto": COLORES["jet_black"],
-            "acento": COLORES["tangerine"]
-        }
+        
+        self.colores = COLORES
 
         self.crear_widgets()
 
@@ -28,11 +25,11 @@ class VentanaLogin(ctk.CTkToplevel):
         ctk.CTkLabel(
             self, text="Biblioteca Digital",
             font=("Segoe UI", 16, "bold"),
-            text_color=self.colores["texto"]
+            text_color=self.colores["jet_black"]
         ).pack(pady=10)
 
-        # Tabview (equivalente al Notebook)
-        self.tabview = ctk.CTkTabview(self, fg_color=self.colores["fondo"])
+       
+        self.tabview = ctk.CTkTabview(self, fg_color=self.colores["soft_peach"])
         self.tabview.pack(pady=10, padx=20, fill="both", expand=True)
 
         self.tab_login = self.tabview.add("Iniciar sesión")
@@ -45,29 +42,29 @@ class VentanaLogin(ctk.CTkToplevel):
         frame = self.tab_login
         self.login_entries = {}
 
-        # Usuario
-        ctk.CTkLabel(frame, text="Usuario:", text_color=self.colores["texto"]).grid(row=0, column=0, padx=10, pady=8, sticky="e")
+        
+        ctk.CTkLabel(frame, text="Usuario:", text_color=self.colores["jet_black"]).grid(row=0, column=0, padx=10, pady=8, sticky="e")
         entry_usuario = ctk.CTkEntry(frame)
         entry_usuario.grid(row=0, column=1, padx=10, pady=8)
         self.login_entries["Usuario:"] = entry_usuario
 
-        # Contraseña
-        ctk.CTkLabel(frame, text="Contraseña:", text_color=self.colores["texto"]).grid(row=1, column=0, padx=10, pady=8, sticky="e")
+        
+        ctk.CTkLabel(frame, text="Contraseña:", text_color=self.colores["jet_black"]).grid(row=1, column=0, padx=10, pady=8, sticky="e")
         entry_pass = ctk.CTkEntry(frame, show="*")
         entry_pass.grid(row=1, column=1, padx=10, pady=8)
         self.login_entries["Contraseña:"] = entry_pass
 
-        # Botón entrar
+        
         btn = ctk.CTkButton(
             frame, text="Entrar",
-            fg_color=self.colores["acento"],
-            text_color=self.colores["texto"],
+            fg_color=self.colores["tangerine"],
+            text_color=self.colores["jet_black"],
             command=self.procesar_login
         )
         btn.grid(row=2, columnspan=2, pady=15)
 
-        # Mensaje
-        self.lbl_mensaje_login = ctk.CTkLabel(frame, text="", text_color=self.colores["acento"])
+        
+        self.lbl_mensaje_login = ctk.CTkLabel(frame, text="", text_color=self.colores["tangerine"])
         self.lbl_mensaje_login.grid(row=3, columnspan=2)
 
     def crear_registro(self):
@@ -84,28 +81,28 @@ class VentanaLogin(ctk.CTkToplevel):
         ]
 
         for texto, fila in campos:
-            ctk.CTkLabel(frame, text=texto, text_color=self.colores["texto"]).grid(row=fila, column=0, padx=10, pady=5, sticky="e")
+            ctk.CTkLabel(frame, text=texto, text_color=self.colores["jet_black"]).grid(row=fila, column=0, padx=10, pady=5, sticky="e")
             show = "*" if "Contraseña" in texto else ""
             entry = ctk.CTkEntry(frame, show=show)
             entry.grid(row=fila, column=1, padx=10, pady=5)
             self.reg_entries[texto] = entry
 
-        # Fecha de nacimiento
-        ctk.CTkLabel(frame, text="Fecha de nacimiento:", text_color=self.colores["texto"]).grid(row=6, column=0, padx=10, pady=5, sticky="e")
+        
+        ctk.CTkLabel(frame, text="Fecha de nacimiento:", text_color=self.colores["jet_black"]).grid(row=6, column=0, padx=10, pady=5, sticky="e")
         self.fecha_entry = ctk.CTkEntry(frame)
         self.fecha_entry.grid(row=6, column=1, padx=10, pady=5)
 
-        # Botón registrarse
+    
         btn = ctk.CTkButton(
             frame, text="Registrarse",
-            fg_color=self.colores["acento"],
-            text_color=self.colores["texto"],
+            fg_color=self.colores["tangerine"],
+            text_color=self.colores["jet_black"],
             command=self.procesar_registro
         )
         btn.grid(row=7, columnspan=2, pady=15)
 
-        # Mensaje
-        self.lbl_mensaje_reg = ctk.CTkLabel(frame, text="", text_color=self.colores["acento"])
+        
+        self.lbl_mensaje_reg = ctk.CTkLabel(frame, text="", text_color=self.colores["tangerine"])
         self.lbl_mensaje_reg.grid(row=8, columnspan=2)
 
     def procesar_login(self):
@@ -153,7 +150,6 @@ class PanelCategorias(ctk.CTkFrame):
         self.callback = callback_categoria
         self.botones = []
         self.categorias = ["Todos", "Ficción", "No ficción", "Infantil", "Revistas", "Tesis"]
-        self.categoria_actual = "Todos"  # Inicializar
         self.crear_botones()
 
     def crear_botones(self):
@@ -198,11 +194,11 @@ class PanelLibros(ctk.CTkFrame):
         self.crear_widgets()
 
     def crear_widgets(self):
-        # Frame contenedor para la tabla (scrollable)
+        
         self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self.scroll_frame.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Encabezados de columna
+    
         self.encabezados = ["Título", "Autor", "Año", "Estado"]
         for i, texto in enumerate(self.encabezados):
             lbl = ctk.CTkLabel(
@@ -211,24 +207,24 @@ class PanelLibros(ctk.CTkFrame):
                 text_color=self.colores["jet_black"]
             )
             lbl.grid(row=0, column=i, padx=5, pady=5, sticky="w")
-            # Configurar pesos de columna
+            
             self.scroll_frame.grid_columnconfigure(i, weight=1 if i < 2 else 0)
 
-        # Línea separadora opcional
+        
         separator = ctk.CTkFrame(self.scroll_frame, height=2, fg_color=self.colores["jet_black"])
         separator.grid(row=1, column=0, columnspan=4, sticky="ew", pady=5)
 
-        self.filas = []  # Guardar referencias a las filas para poder eliminarlas después
+        self.filas = []  
         self.actualizar_tabla()
 
     def actualizar_tabla(self):
-        # Eliminar filas anteriores (desde la fila 2 en adelante)
+       
         for fila in self.filas:
             for widget in fila:
                 widget.destroy()
         self.filas.clear()
 
-        # Insertar nuevos libros
+        
         for idx, libro in enumerate(self.libros_filtrados):
             fila_widgets = []
             for col, valor in enumerate(libro[:4]):
@@ -258,9 +254,8 @@ class BibliotecaGUI(ctk.CTk):
         self.geometry("900x600")
         self.minsize(800, 500)
 
-        self.colores = COLORES.copy()  # Usar constantes
+        self.colores = COLORES
 
-        from auth import Autenticador  # Importar aquí para evitar circular
         self.autenticador = Autenticador()
         self.usuario_actual = None
         self.crear_widgets()
@@ -305,7 +300,7 @@ class BibliotecaGUI(ctk.CTk):
             hover_color="#d97e44"
         ).pack(side="right", padx=5)
 
-        # Contenido principal (categorías + libros)
+        
         content_frame = ctk.CTkFrame(main_frame, fg_color=self.colores["soft_peach"])
         content_frame.pack(fill="both", expand=True, pady=5)
 
@@ -315,7 +310,7 @@ class BibliotecaGUI(ctk.CTk):
         self.libros = PanelLibros(content_frame, self.colores)
         self.libros.pack(side="right", fill="both", expand=True)
 
-        # Barra de estado
+        
         status_frame = ctk.CTkFrame(main_frame, fg_color=self.colores["jet_black"], height=25)
         status_frame.pack(fill="x")
         status_frame.pack_propagate(False)
@@ -337,7 +332,7 @@ class BibliotecaGUI(ctk.CTk):
 
     def abrir_login(self):
         if self.usuario_actual:
-            # Cerrar sesión
+            
             self.usuario_actual = None
             self.boton_usuario.configure(text="Iniciar sesión")
             return
